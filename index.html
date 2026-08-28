@@ -1,0 +1,1754 @@
+```html
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>لعبة سباق الطريق</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: #111;
+      font-family: Arial, Tahoma, sans-serif;
+      touch-action: none;
+    }
+
+    body {
+      position: relative;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    #hud {
+      position: fixed;
+      top: 12px;
+      left: 12px;
+      right: 12px;
+      z-index: 5;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 7px;
+      pointer-events: none;
+    }
+
+    .hud-box {
+      min-width: 0;
+      padding: 7px 8px;
+      border: 2px solid rgba(255, 255, 255, 0.28);
+      border-radius: 12px;
+      background: rgba(0, 0, 0, 0.65);
+      color: white;
+      text-align: center;
+      backdrop-filter: blur(4px);
+    }
+
+    .hud-label {
+      display: block;
+      font-size: 11px;
+      opacity: 0.78;
+      margin-bottom: 3px;
+    }
+
+    .hud-value {
+      display: block;
+      font-size: 16px;
+      font-weight: bold;
+      direction: ltr;
+      white-space: nowrap;
+    }
+
+    #statusBar {
+      position: fixed;
+      top: 100px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 5;
+      display: flex;
+      gap: 8px;
+      pointer-events: none;
+    }
+
+    .status {
+      display: none;
+      padding: 7px 12px;
+      border-radius: 20px;
+      background: rgba(0, 0, 0, 0.72);
+      color: white;
+      font-size: 13px;
+      font-weight: bold;
+      white-space: nowrap;
+    }
+
+    #shieldStatus {
+      border: 2px solid #5cc8ff;
+    }
+
+    #slowStatus {
+      border: 2px solid #d58cff;
+    }
+
+    #controls {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 20px;
+      z-index: 6;
+      display: flex;
+      justify-content: space-between;
+      padding: 0 24px;
+      pointer-events: none;
+    }
+
+    .control-button {
+      width: 82px;
+      height: 82px;
+      border: 3px solid rgba(255, 255, 255, 0.4);
+      border-radius: 50%;
+      background: rgba(0, 0, 0, 0.42);
+      color: white;
+      font-size: 48px;
+      line-height: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      user-select: none;
+      pointer-events: auto;
+      touch-action: manipulation;
+    }
+
+    .control-button:active {
+      background: rgba(255, 255, 255, 0.22);
+      transform: scale(0.94);
+    }
+
+    .overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      background: rgba(0, 0, 0, 0.58);
+      overflow-y: auto;
+    }
+
+    .panel {
+      width: min(460px, 100%);
+      max-height: 94vh;
+      overflow-y: auto;
+      padding: 25px 22px;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-radius: 22px;
+      background: rgba(10, 10, 10, 0.94);
+      color: white;
+      text-align: center;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
+    }
+
+    .panel h1 {
+      margin: 0 0 10px;
+      font-size: clamp(28px, 7vw, 40px);
+    }
+
+    .panel h2 {
+      margin: 0 0 12px;
+      font-size: 23px;
+    }
+
+    .panel p {
+      margin: 0 0 18px;
+      font-size: 16px;
+      line-height: 1.7;
+      color: #ddd;
+    }
+
+    .field {
+      margin: 10px 0;
+      text-align: right;
+    }
+
+    .field label {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 14px;
+      color: #ccc;
+    }
+
+    .field input,
+    .field select {
+      width: 100%;
+      min-height: 48px;
+      border: 2px solid #555;
+      border-radius: 12px;
+      padding: 8px 12px;
+      background: #181818;
+      color: white;
+      font-size: 17px;
+      outline: none;
+    }
+
+    .field input:focus,
+    .field select:focus {
+      border-color: #70c842;
+    }
+
+    #secondPlayerFields {
+      display: none;
+    }
+
+    .main-button {
+      width: 100%;
+      min-height: 56px;
+      margin-top: 12px;
+      border: 0;
+      border-radius: 15px;
+      background: #4caf22;
+      color: white;
+      font-size: 22px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    .main-button:active {
+      transform: scale(0.98);
+    }
+
+    .secondary-button {
+      width: 100%;
+      min-height: 46px;
+      margin-top: 9px;
+      border: 1px solid #555;
+      border-radius: 12px;
+      background: #202020;
+      color: white;
+      font-size: 16px;
+      cursor: pointer;
+    }
+
+    #gameOver {
+      display: none;
+    }
+
+    #leaderboard {
+      margin-top: 16px;
+      text-align: right;
+    }
+
+    #leaderboard h3 {
+      margin: 0 0 8px;
+      font-size: 18px;
+    }
+
+    .leader-row {
+      display: grid;
+      grid-template-columns: 35px 1fr 75px;
+      gap: 6px;
+      padding: 7px 8px;
+      margin: 4px 0;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.07);
+      font-size: 14px;
+    }
+
+    .leader-score {
+      direction: ltr;
+      text-align: left;
+    }
+
+    #roundInfo {
+      font-size: 18px;
+      margin-bottom: 8px;
+    }
+
+    #abilityHint {
+      margin-top: 10px;
+      color: #bbb;
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    @media (max-width: 560px) {
+      #hud {
+        grid-template-columns: repeat(4, 1fr);
+        top: 7px;
+        left: 7px;
+        right: 7px;
+        gap: 4px;
+      }
+
+      .hud-box {
+        padding: 6px 3px;
+      }
+
+      .hud-label {
+        font-size: 9px;
+      }
+
+      .hud-value {
+        font-size: 13px;
+      }
+
+      #statusBar {
+        top: 72px;
+      }
+
+      #controls {
+        bottom: 14px;
+        padding: 0 16px;
+      }
+
+      .control-button {
+        width: 72px;
+        height: 72px;
+        font-size: 42px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <canvas id="gameCanvas"></canvas>
+
+  <div id="hud">
+    <div class="hud-box">
+      <span class="hud-label">المسافة</span>
+      <span class="hud-value" id="distanceValue">0 م</span>
+    </div>
+
+    <div class="hud-box">
+      <span class="hud-label">مضاعف السرعة</span>
+      <span class="hud-value" id="speedValue">×1.00</span>
+    </div>
+
+    <div class="hud-box">
+      <span class="hud-label">أفضل نتيجة</span>
+      <span class="hud-value" id="bestValue">0 م</span>
+    </div>
+
+    <div class="hud-box">
+      <span class="hud-label">النقاط</span>
+      <span class="hud-value" id="pointsValue">0</span>
+    </div>
+  </div>
+
+  <div id="statusBar">
+    <div class="status" id="shieldStatus">🛡️ درع</div>
+    <div class="status" id="slowStatus">⏱️ تبطيء</div>
+  </div>
+
+  <div id="controls">
+    <button class="control-button" id="leftButton" aria-label="يسار">‹</button>
+    <button class="control-button" id="rightButton" aria-label="يمين">›</button>
+  </div>
+
+  <div class="overlay" id="startOverlay">
+    <div class="panel">
+      <h1>لعبة سباق الطريق</h1>
+
+      <p>
+        تجنب السيارات، اجمع النقاط والقدرات، وحاول قطع أكبر مسافة.
+      </p>
+
+      <div class="field">
+        <label for="playerOneName">اسم اللاعب</label>
+        <input id="playerOneName" type="text" maxlength="18" value="اللاعب 1" autocomplete="off">
+      </div>
+
+      <div class="field">
+        <label for="gameMode">نمط اللعب</label>
+        <select id="gameMode">
+          <option value="single">لاعب واحد</option>
+          <option value="two">لاعبان بالتناوب</option>
+        </select>
+      </div>
+
+      <div class="field" id="secondPlayerFields">
+        <label for="playerTwoName">اسم اللاعب الثاني</label>
+        <input id="playerTwoName" type="text" maxlength="18" value="اللاعب 2" autocomplete="off">
+      </div>
+
+      <button class="main-button" id="startButton">ابدأ</button>
+
+      <div id="abilityHint">
+        🛡️ الدرع يحمي من اصطدام واحد.
+        ⏱️ التبطيء يقلل سرعة السيارات لمدة 3 ثوانٍ.
+        🎁 اجمع القدرات والنقاط أثناء السباق.
+      </div>
+
+      <div id="leaderboard"></div>
+    </div>
+  </div>
+
+  <div class="overlay" id="gameOver">
+    <div class="panel">
+      <h1 id="gameOverTitle">انتهت الجولة</h1>
+      <div id="roundInfo"></div>
+      <p id="resultText">المسافة: 0 م</p>
+
+      <button class="main-button" id="restartButton">إعادة اللعب</button>
+    </div>
+  </div>
+
+  <script>
+    "use strict";
+
+    // Game tuning values
+    const INITIAL_SPEED = 280;
+    const SPEED_INCREASE = 18;
+    const MAX_SPEED = 760;
+    const ROW_DISTANCE = 260;
+    const LANE_COUNT = 3;
+
+    const PLAYER_WIDTH = 48;
+    const PLAYER_HEIGHT = 78;
+    const OBSTACLE_WIDTH = 48;
+    const OBSTACLE_HEIGHT = 78;
+
+    const MAX_FRAME_TIME = 0.05;
+    const PLAYER_SMOOTHNESS = 14;
+
+    const COIN_RADIUS = 13;
+    const POWERUP_SIZE = 34;
+
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+
+    const distanceValue = document.getElementById("distanceValue");
+    const speedValue = document.getElementById("speedValue");
+    const bestValue = document.getElementById("bestValue");
+    const pointsValue = document.getElementById("pointsValue");
+
+    const shieldStatus = document.getElementById("shieldStatus");
+    const slowStatus = document.getElementById("slowStatus");
+
+    const startOverlay = document.getElementById("startOverlay");
+    const gameOverOverlay = document.getElementById("gameOver");
+
+    const startButton = document.getElementById("startButton");
+    const restartButton = document.getElementById("restartButton");
+
+    const playerOneNameInput = document.getElementById("playerOneName");
+    const playerTwoNameInput = document.getElementById("playerTwoName");
+    const gameMode = document.getElementById("gameMode");
+    const secondPlayerFields = document.getElementById("secondPlayerFields");
+
+    const gameOverTitle = document.getElementById("gameOverTitle");
+    const roundInfo = document.getElementById("roundInfo");
+    const resultText = document.getElementById("resultText");
+    const leaderboard = document.getElementById("leaderboard");
+
+    let width = 0;
+    let height = 0;
+    let dpr = 1;
+
+    let roadLeft = 0;
+    let roadWidth = 0;
+    let laneWidth = 0;
+
+    let player = null;
+    let obstacles = [];
+    let collectibles = [];
+
+    let distance = 0;
+    let points = 0;
+    let speed = INITIAL_SPEED;
+
+    let spawnProgress = 0;
+    let collectibleProgress = 0;
+    let roadLineOffset = 0;
+
+    let running = false;
+    let frameId = null;
+    let lastTime = 0;
+
+    let bestScore = loadBestScore();
+
+    let audioContext = null;
+
+    let selectedMode = "single";
+    let playerNames = ["اللاعب 1", "اللاعب 2"];
+    let currentPlayerIndex = 0;
+
+    let shield = false;
+    let slowTime = 0;
+
+    let swipeStartX = null;
+
+    const obstacleColors = [
+      "#e53935",
+      "#f9a825",
+      "#8e24aa",
+      "#00897b",
+      "#3949ab"
+    ];
+
+    function loadBestScore() {
+      try {
+        const saved = localStorage.getItem("roadRaceBest");
+
+        if (saved === null) {
+          return 0;
+        }
+
+        const value = Number(saved);
+
+        if (!Number.isFinite(value) || value < 0) {
+          return 0;
+        }
+
+        return Math.floor(value);
+      } catch (error) {
+        return 0;
+      }
+    }
+
+    function saveBestScore() {
+      try {
+        localStorage.setItem("roadRaceBest", String(bestScore));
+      } catch (error) {
+        // Ignore storage errors
+      }
+    }
+
+    function loadLeaderboard() {
+      try {
+        const saved = localStorage.getItem("roadRaceLeaderboard");
+
+        if (!saved) {
+          return [];
+        }
+
+        const parsed = JSON.parse(saved);
+
+        if (!Array.isArray(parsed)) {
+          return [];
+        }
+
+        return parsed
+          .filter(function (item) {
+            return (
+              item &&
+              typeof item.name === "string" &&
+              Number.isFinite(Number(item.score)) &&
+              Number(item.score) >= 0
+            );
+          })
+          .map(function (item) {
+            return {
+              name: item.name.slice(0, 18),
+              score: Math.floor(Number(item.score))
+            };
+          })
+          .sort(function (a, b) {
+            return b.score - a.score;
+          })
+          .slice(0, 10);
+      } catch (error) {
+        return [];
+      }
+    }
+
+    function saveLeaderboardEntry(name, score) {
+      if (!Number.isFinite(score) || score <= 0) {
+        return;
+      }
+
+      const cleanName = String(name || "لاعب").trim().slice(0, 18) || "لاعب";
+
+      try {
+        const entries = loadLeaderboard();
+
+        entries.push({
+          name: cleanName,
+          score: Math.floor(score)
+        });
+
+        entries.sort(function (a, b) {
+          return b.score - a.score;
+        });
+
+        localStorage.setItem(
+          "roadRaceLeaderboard",
+          JSON.stringify(entries.slice(0, 10))
+        );
+      } catch (error) {
+        // Ignore storage errors
+      }
+    }
+
+    function renderLeaderboard() {
+      const entries = loadLeaderboard();
+
+      if (entries.length === 0) {
+        leaderboard.innerHTML =
+          "<h3>🏆 أفضل النتائج</h3><p>لا توجد نتائج محفوظة بعد.</p>";
+        return;
+      }
+
+      let html = "<h3>🏆 أفضل النتائج</h3>";
+
+      entries.forEach(function (entry, index) {
+        html +=
+          '<div class="leader-row">' +
+          "<span>" + (index + 1) + "</span>" +
+          "<span>" + escapeHTML(entry.name) + "</span>" +
+          '<span class="leader-score">' + entry.score + " م</span>" +
+          "</div>";
+      });
+
+      leaderboard.innerHTML = html;
+    }
+
+    function escapeHTML(value) {
+      return String(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    function resizeCanvas() {
+      dpr = Math.min(window.devicePixelRatio || 1, 2);
+
+      width = window.innerWidth;
+      height = window.innerHeight;
+
+      canvas.width = Math.floor(width * dpr);
+      canvas.height = Math.floor(height * dpr);
+
+      canvas.style.width = width + "px";
+      canvas.style.height = height + "px";
+
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+      roadWidth = Math.min(width * 0.78, 560);
+      roadLeft = (width - roadWidth) / 2;
+      laneWidth = roadWidth / LANE_COUNT;
+
+      if (player) {
+        player.x = laneCenter(player.lane);
+        player.targetX = player.x;
+        player.y = height - Math.max(145, height * 0.17);
+      }
+    }
+
+    function laneCenter(lane) {
+      return roadLeft + laneWidth * lane + laneWidth / 2;
+    }
+
+    function resetGameState() {
+      distance = 0;
+      points = 0;
+      speed = INITIAL_SPEED;
+
+      spawnProgress = 0;
+      collectibleProgress = 0;
+      roadLineOffset = 0;
+
+      obstacles = [];
+      collectibles = [];
+
+      shield = false;
+      slowTime = 0;
+
+      player = {
+        lane: 1,
+        x: laneCenter(1),
+        targetX: laneCenter(1),
+        y: height - Math.max(145, height * 0.17),
+        width: PLAYER_WIDTH,
+        height: PLAYER_HEIGHT
+      };
+
+      updateHUD();
+    }
+
+    function prepareAudio() {
+      try {
+        if (!audioContext) {
+          audioContext = new (
+            window.AudioContext ||
+            window.webkitAudioContext
+          )();
+        }
+
+        if (audioContext.state === "suspended") {
+          audioContext.resume();
+        }
+      } catch (error) {
+        audioContext = null;
+      }
+    }
+
+    function playTone(frequency, duration, type, volume, slideTo) {
+      if (!audioContext) {
+        return;
+      }
+
+      try {
+        const oscillator = audioContext.createOscillator();
+        const gain = audioContext.createGain();
+
+        oscillator.type = type || "sine";
+        oscillator.frequency.setValueAtTime(
+          frequency,
+          audioContext.currentTime
+        );
+
+        if (slideTo) {
+          oscillator.frequency.exponentialRampToValueAtTime(
+            Math.max(20, slideTo),
+            audioContext.currentTime + duration
+          );
+        }
+
+        gain.gain.setValueAtTime(0.0001, audioContext.currentTime);
+        gain.gain.exponentialRampToValueAtTime(
+          volume,
+          audioContext.currentTime + 0.01
+        );
+
+        gain.gain.exponentialRampToValueAtTime(
+          0.0001,
+          audioContext.currentTime + duration
+        );
+
+        oscillator.connect(gain);
+        gain.connect(audioContext.destination);
+
+        oscillator.start();
+        oscillator.stop(audioContext.currentTime + duration + 0.02);
+      } catch (error) {
+        // Ignore audio errors
+      }
+    }
+
+    function playCollectSound() {
+      playTone(660, 0.08, "sine", 0.06, 880);
+
+      setTimeout(function () {
+        playTone(880, 0.1, "sine", 0.05, 1040);
+      }, 55);
+    }
+
+    function playShieldSound() {
+      playTone(420, 0.12, "triangle", 0.06, 720);
+
+      setTimeout(function () {
+        playTone(720, 0.16, "triangle", 0.05, 980);
+      }, 80);
+    }
+
+    function playSlowSound() {
+      playTone(300, 0.2, "sine", 0.06, 170);
+    }
+
+    function playCollisionSound() {
+      playTone(130, 0.28, "sawtooth", 0.09, 45);
+    }
+
+    function playEndSound() {
+      playTone(330, 0.16, "triangle", 0.06, 220);
+
+      setTimeout(function () {
+        playTone(220, 0.25, "triangle", 0.06, 110);
+      }, 130);
+    }
+
+    function startGame() {
+      if (frameId !== null) {
+        cancelAnimationFrame(frameId);
+        frameId = null;
+      }
+
+      prepareAudio();
+
+      selectedMode = gameMode.value;
+
+      playerNames[0] =
+        playerOneNameInput.value.trim().slice(0, 18) || "اللاعب 1";
+
+      playerNames[1] =
+        playerTwoNameInput.value.trim().slice(0, 18) || "اللاعب 2";
+
+      running = false;
+      resetGameState();
+
+      startOverlay.style.display = "none";
+      gameOverOverlay.style.display = "none";
+
+      running = true;
+      lastTime = performance.now();
+
+      scheduleFrame();
+    }
+
+    function endGame() {
+      if (!running) {
+        return;
+      }
+
+      running = false;
+
+      if (frameId !== null) {
+        cancelAnimationFrame(frameId);
+        frameId = null;
+      }
+
+      const finalScore = Math.floor(distance);
+      const currentName = playerNames[currentPlayerIndex];
+
+      if (finalScore > bestScore) {
+        bestScore = finalScore;
+        saveBestScore();
+      }
+
+      saveLeaderboardEntry(currentName, finalScore);
+
+      playCollisionSound();
+
+      setTimeout(function () {
+        playEndSound();
+      }, 150);
+
+      updateHUD();
+
+      if (selectedMode === "two") {
+        gameOverTitle.textContent = "انتهت جولة " + currentName;
+
+        roundInfo.textContent =
+          currentName +
+          " حقق " +
+          finalScore +
+          " م — النقاط: " +
+          points;
+
+        resultText.textContent =
+          "الآن دور " +
+          playerNames[currentPlayerIndex === 0 ? 1 : 0];
+
+        restartButton.textContent =
+          "ابدأ دور " +
+          playerNames[currentPlayerIndex === 0 ? 1 : 0];
+      } else {
+        gameOverTitle.textContent = "انتهت الجولة";
+
+        roundInfo.textContent =
+          currentName +
+          " — المسافة: " +
+          finalScore +
+          " م";
+
+        resultText.textContent =
+          "النقاط: " +
+          points +
+          " — أفضل نتيجة: " +
+          bestScore +
+          " م";
+
+        restartButton.textContent = "إعادة اللعب";
+      }
+
+      gameOverOverlay.style.display = "flex";
+    }
+
+    function startNextTurn() {
+      if (selectedMode === "two") {
+        currentPlayerIndex =
+          currentPlayerIndex === 0 ? 1 : 0;
+      }
+
+      startGame();
+    }
+
+    function scheduleFrame() {
+      if (frameId !== null) {
+        cancelAnimationFrame(frameId);
+      }
+
+      if (!running) {
+        frameId = null;
+        return;
+      }
+
+      frameId = requestAnimationFrame(gameLoop);
+    }
+
+    function gameLoop(timestamp) {
+      frameId = null;
+
+      if (!running) {
+        return;
+      }
+
+      let dt = (timestamp - lastTime) / 1000;
+
+      lastTime = timestamp;
+
+      if (!Number.isFinite(dt) || dt < 0) {
+        dt = 0;
+      }
+
+      dt = Math.min(dt, MAX_FRAME_TIME);
+
+      update(dt);
+      draw();
+
+      scheduleFrame();
+    }
+
+    function update(dt) {
+      speed = Math.min(
+        MAX_SPEED,
+        INITIAL_SPEED + SPEED_INCREASE * distance / 100
+      );
+
+      distance += speed * dt / 100;
+
+      roadLineOffset += speed * dt;
+
+      if (roadLineOffset > 100000) {
+        roadLineOffset %= 82;
+      }
+
+      if (slowTime > 0) {
+        slowTime = Math.max(0, slowTime - dt);
+      }
+
+      spawnProgress += speed * dt;
+
+      while (spawnProgress >= ROW_DISTANCE) {
+        spawnProgress -= ROW_DISTANCE;
+        spawnObstacleRow();
+      }
+
+      collectibleProgress += speed * dt;
+
+      while (collectibleProgress >= 360) {
+        collectibleProgress -= 360;
+        spawnCollectible();
+      }
+
+      const smoothing = 1 - Math.exp(-PLAYER_SMOOTHNESS * dt);
+
+      player.x += (player.targetX - player.x) * smoothing;
+
+      const enemySpeedMultiplier = slowTime > 0 ? 0.45 : 1;
+
+      for (const obstacle of obstacles) {
+        obstacle.y += speed * enemySpeedMultiplier * dt;
+      }
+
+      for (const item of collectibles) {
+        item.y += speed * enemySpeedMultiplier * dt;
+        item.rotation += dt * 3;
+      }
+
+      obstacles = obstacles.filter(function (obstacle) {
+        return obstacle.y < height + obstacle.height + 40;
+      });
+
+      collectibles = collectibles.filter(function (item) {
+        return item.y < height + 80 && !item.collected;
+      });
+
+      checkCollectibles();
+      checkCollisions();
+      updateHUD();
+    }
+
+    function spawnObstacleRow() {
+      // One or two lanes are occupied, so at least one lane always remains clear.
+      const occupiedCount = Math.random() < 0.55 ? 1 : 2;
+
+      const lanes = [0, 1, 2];
+
+      for (let i = lanes.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        const temp = lanes[i];
+        lanes[i] = lanes[j];
+        lanes[j] = temp;
+      }
+
+      for (let i = 0; i < occupiedCount; i++) {
+        const lane = lanes[i];
+
+        obstacles.push({
+          lane: lane,
+          x: laneCenter(lane),
+          y: -OBSTACLE_HEIGHT - 20,
+          width: OBSTACLE_WIDTH,
+          height: OBSTACLE_HEIGHT,
+          color: obstacleColors[
+            Math.floor(Math.random() * obstacleColors.length)
+          ]
+        });
+      }
+    }
+
+    function spawnCollectible() {
+      const lane = Math.floor(Math.random() * LANE_COUNT);
+
+      const random = Math.random();
+
+      let type = "coin";
+
+      if (random < 0.12) {
+        type = "shield";
+      } else if (random < 0.22) {
+        type = "slow";
+      }
+
+      collectibles.push({
+        type: type,
+        lane: lane,
+        x: laneCenter(lane),
+        y: -POWERUP_SIZE,
+        size: type === "coin" ? COIN_RADIUS * 2 : POWERUP_SIZE,
+        rotation: 0,
+        collected: false
+      });
+    }
+
+    function checkCollectibles() {
+      for (const item of collectibles) {
+        if (item.collected) {
+          continue;
+        }
+
+        if (collectibleHitsPlayer(item)) {
+          item.collected = true;
+
+          if (item.type === "coin") {
+            points += 10;
+            playCollectSound();
+          }
+
+          if (item.type === "shield") {
+            shield = true;
+            playShieldSound();
+          }
+
+          if (item.type === "slow") {
+            slowTime = 3;
+            playSlowSound();
+          }
+        }
+      }
+    }
+
+    function collectibleHitsPlayer(item) {
+      const distanceX = Math.abs(player.x - item.x);
+      const distanceY = Math.abs(player.y - item.y);
+
+      const horizontalLimit =
+        player.width * 0.34 + item.size * 0.38;
+
+      const verticalLimit =
+        player.height * 0.34 + item.size * 0.38;
+
+      return (
+        distanceX < horizontalLimit &&
+        distanceY < verticalLimit
+      );
+    }
+
+    function checkCollisions() {
+      for (const obstacle of obstacles) {
+        if (!isColliding(player, obstacle)) {
+          continue;
+        }
+
+        if (shield) {
+          shield = false;
+
+          const index = obstacles.indexOf(obstacle);
+
+          if (index !== -1) {
+            obstacles.splice(index, 1);
+          }
+
+          playShieldSound();
+          return;
+        }
+
+        endGame();
+        return;
+      }
+    }
+
+    function isColliding(a, b) {
+      // Collision boxes are intentionally smaller than the drawn cars.
+      const aPaddingX = a.width * 0.18;
+      const aPaddingY = a.height * 0.14;
+
+      const bPaddingX = b.width * 0.18;
+      const bPaddingY = b.height * 0.14;
+
+      const ax = a.x - a.width / 2 + aPaddingX;
+      const ay = a.y - a.height / 2 + aPaddingY;
+      const aw = a.width - aPaddingX * 2;
+      const ah = a.height - aPaddingY * 2;
+
+      const bx = b.x - b.width / 2 + bPaddingX;
+      const by = b.y - b.height / 2 + bPaddingY;
+      const bw = b.width - bPaddingX * 2;
+      const bh = b.height - bPaddingY * 2;
+
+      return (
+        ax < bx + bw &&
+        ax + aw > bx &&
+        ay < by + bh &&
+        ay + ah > by
+      );
+    }
+
+    function movePlayer(direction) {
+      if (!running) {
+        return;
+      }
+
+      const newLane = Math.max(
+        0,
+        Math.min(
+          LANE_COUNT - 1,
+          player.lane + direction
+        )
+      );
+
+      if (newLane === player.lane) {
+        return;
+      }
+
+      player.lane = newLane;
+      player.targetX = laneCenter(newLane);
+    }
+
+    function updateHUD() {
+      distanceValue.textContent =
+        Math.floor(distance) + " م";
+
+      const multiplier = speed / INITIAL_SPEED;
+
+      speedValue.textContent =
+        "×" + multiplier.toFixed(2);
+
+      bestValue.textContent =
+        bestScore + " م";
+
+      pointsValue.textContent =
+        String(points);
+
+      if (shield) {
+        shieldStatus.style.display = "block";
+      } else {
+        shieldStatus.style.display = "none";
+      }
+
+      if (slowTime > 0) {
+        slowStatus.style.display = "block";
+        slowStatus.textContent =
+          "⏱️ تبطيء " + slowTime.toFixed(1) + " ث";
+      } else {
+        slowStatus.style.display = "none";
+      }
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, width, height);
+
+      drawBackground();
+      drawRoad();
+      drawRoadLines();
+
+      for (const item of collectibles) {
+        drawCollectible(item);
+      }
+
+      for (const obstacle of obstacles) {
+        drawCar(
+          obstacle.x,
+          obstacle.y,
+          obstacle.width,
+          obstacle.height,
+          obstacle.color,
+          false
+        );
+      }
+
+      if (player) {
+        drawCar(
+          player.x,
+          player.y,
+          player.width,
+          player.height,
+          "#54b928",
+          true
+        );
+
+        if (shield) {
+          drawShield();
+        }
+      }
+    }
+
+    function drawBackground() {
+      ctx.fillStyle = "#245d27";
+      ctx.fillRect(0, 0, width, height);
+
+      ctx.fillStyle = "#327b32";
+
+      const sideWidth = Math.max(0, roadLeft);
+
+      for (let y = -40; y < height + 80; y += 90) {
+        ctx.fillRect(0, y, sideWidth, 45);
+        ctx.fillRect(
+          roadLeft + roadWidth,
+          y,
+          sideWidth,
+          45
+        );
+      }
+    }
+
+    function drawRoad() {
+      ctx.fillStyle = "#25282b";
+      ctx.fillRect(
+        roadLeft,
+        0,
+        roadWidth,
+        height
+      );
+
+      ctx.fillStyle = "#151719";
+      ctx.fillRect(
+        roadLeft + 5,
+        0,
+        roadWidth - 10,
+        height
+      );
+
+      ctx.fillStyle = "#f5f5f5";
+
+      ctx.fillRect(
+        roadLeft,
+        0,
+        4,
+        height
+      );
+
+      ctx.fillRect(
+        roadLeft + roadWidth - 4,
+        0,
+        4,
+        height
+      );
+    }
+
+    function drawRoadLines() {
+      const dashHeight = 48;
+      const gap = 34;
+      const cycle = dashHeight + gap;
+
+      const offset = roadLineOffset % cycle;
+
+      ctx.fillStyle = "rgba(255,255,255,0.82)";
+
+      for (let lane = 1; lane < LANE_COUNT; lane++) {
+        const x =
+          roadLeft +
+          laneWidth * lane -
+          2;
+
+        for (
+          let y = -cycle + offset;
+          y < height + cycle;
+          y += cycle
+        ) {
+          ctx.fillRect(
+            x,
+            y,
+            4,
+            dashHeight
+          );
+        }
+      }
+    }
+
+    function drawCollectible(item) {
+      ctx.save();
+
+      ctx.translate(item.x, item.y);
+      ctx.rotate(item.rotation);
+
+      if (item.type === "coin") {
+        ctx.beginPath();
+        ctx.arc(
+          0,
+          0,
+          COIN_RADIUS,
+          0,
+          Math.PI * 2
+        );
+
+        ctx.fillStyle = "#ffd32a";
+        ctx.fill();
+
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = "#fff3a0";
+        ctx.stroke();
+
+        ctx.fillStyle = "#9c7200";
+        ctx.font = "bold 15px Arial";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText("+", 0, 0);
+      }
+
+      if (item.type === "shield") {
+        ctx.fillStyle = "#35bdf4";
+
+        ctx.beginPath();
+        ctx.moveTo(0, -17);
+        ctx.lineTo(14, -10);
+        ctx.lineTo(11, 8);
+        ctx.quadraticCurveTo(
+          0,
+          19,
+          -11,
+          8
+        );
+        ctx.lineTo(-14, -10);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.strokeStyle = "#d8f5ff";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        ctx.fillStyle = "white";
+        ctx.font = "bold 14px Arial";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText("S", 0, 1);
+      }
+
+      if (item.type === "slow") {
+        ctx.fillStyle = "#b86cff";
+
+        ctx.beginPath();
+        ctx.arc(
+          0,
+          0,
+          16,
+          0,
+          Math.PI * 2
+        );
+        ctx.fill();
+
+        ctx.strokeStyle = "#f0d8ff";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        ctx.fillStyle = "white";
+        ctx.fillRect(-2, -10, 4, 11);
+        ctx.fillRect(-2, 5, 7, 4);
+      }
+
+      ctx.restore();
+    }
+
+    function drawShield() {
+      ctx.save();
+
+      ctx.translate(player.x, player.y);
+
+      const pulse =
+        1 +
+        Math.sin(performance.now() / 120) * 0.04;
+
+      ctx.scale(pulse, pulse);
+
+      ctx.beginPath();
+      ctx.arc(
+        0,
+        0,
+        39,
+        0,
+        Math.PI * 2
+      );
+
+      ctx.strokeStyle =
+        "rgba(80,210,255,0.85)";
+
+      ctx.lineWidth = 4;
+      ctx.stroke();
+
+      ctx.restore();
+    }
+
+    function drawCar(
+      x,
+      y,
+      carWidth,
+      carHeight,
+      bodyColor,
+      isPlayer
+    ) {
+      ctx.save();
+
+      ctx.translate(x, y);
+
+      const w = carWidth;
+      const h = carHeight;
+
+      ctx.fillStyle =
+        "rgba(0,0,0,0.35)";
+
+      roundRect(
+        -w * 0.55,
+        -h * 0.46,
+        w * 1.1,
+        h * 0.96,
+        w * 0.18
+      );
+
+      ctx.fill();
+
+      ctx.fillStyle = bodyColor;
+
+      roundRect(
+        -w / 2,
+        -h / 2,
+        w,
+        h,
+        w * 0.2
+      );
+
+      ctx.fill();
+
+      if (isPlayer) {
+        ctx.fillStyle = "#e8f4e4";
+
+        ctx.fillRect(
+          -w * 0.11,
+          -h * 0.49,
+          w * 0.22,
+          h * 0.98
+        );
+
+        ctx.fillStyle =
+          "rgba(255,255,255,0.22)";
+
+        ctx.fillRect(
+          -w * 0.5,
+          -h * 0.18,
+          w,
+          h * 0.07
+        );
+      }
+
+      ctx.fillStyle = "#101820";
+
+      roundRect(
+        -w * 0.34,
+        -h * 0.28,
+        w * 0.68,
+        h * 0.29,
+        w * 0.08
+      );
+
+      ctx.fill();
+
+      ctx.fillStyle = "#17232a";
+
+      roundRect(
+        -w * 0.30,
+        h * 0.07,
+        w * 0.60,
+        h * 0.22,
+        w * 0.07
+      );
+
+      ctx.fill();
+
+      ctx.fillStyle = "#d9f2ff";
+
+      ctx.fillRect(
+        -w * 0.25,
+        -h * 0.24,
+        w * 0.50,
+        h * 0.035
+      );
+
+      ctx.fillStyle = "#efefef";
+
+      ctx.fillRect(
+        -w * 0.43,
+        -h * 0.34,
+        w * 0.08,
+        h * 0.16
+      );
+
+      ctx.fillRect(
+        w * 0.35,
+        -h * 0.34,
+        w * 0.08,
+        h * 0.16
+      );
+
+      ctx.fillStyle = "#ff3b30";
+
+      ctx.fillRect(
+        -w * 0.40,
+        h * 0.34,
+        w * 0.15,
+        h * 0.08
+      );
+
+      ctx.fillRect(
+        w * 0.25,
+        h * 0.34,
+        w * 0.15,
+        h * 0.08
+      );
+
+      ctx.fillStyle = "#111";
+
+      ctx.fillRect(
+        -w * 0.57,
+        -h * 0.25,
+        w * 0.10,
+        h * 0.20
+      );
+
+      ctx.fillRect(
+        w * 0.47,
+        -h * 0.25,
+        w * 0.10,
+        h * 0.20
+      );
+
+      ctx.fillRect(
+        -w * 0.57,
+        h * 0.18,
+        w * 0.10,
+        h * 0.20
+      );
+
+      ctx.fillRect(
+        w * 0.47,
+        h * 0.18,
+        w * 0.10,
+        h * 0.20
+      );
+
+      ctx.restore();
+    }
+
+    function roundRect(
+      x,
+      y,
+      w,
+      h,
+      radius
+    ) {
+      const r = Math.min(
+        radius,
+        Math.abs(w) / 2,
+        Math.abs(h) / 2
+      );
+
+      ctx.beginPath();
+
+      ctx.moveTo(
+        x + r,
+        y
+      );
+
+      ctx.lineTo(
+        x + w - r,
+        y
+      );
+
+      ctx.quadraticCurveTo(
+        x + w,
+        y,
+        x + w,
+        y + r
+      );
+
+      ctx.lineTo(
+        x + w,
+        y + h - r
+      );
+
+      ctx.quadraticCurveTo(
+        x + w,
+        y + h,
+        x + w - r,
+        y + h
+      );
+
+      ctx.lineTo(
+        x + r,
+        y + h
+      );
+
+      ctx.quadraticCurveTo(
+        x,
+        y + h,
+        x,
+        y + h - r
+      );
+
+      ctx.lineTo(
+        x,
+        y + r
+      );
+
+      ctx.quadraticCurveTo(
+        x,
+        y,
+        x + r,
+        y
+      );
+
+      ctx.closePath();
+    }
+
+    gameMode.addEventListener("change", function () {
+      if (gameMode.value === "two") {
+        secondPlayerFields.style.display = "block";
+      } else {
+        secondPlayerFields.style.display = "none";
+      }
+    });
+
+    startButton.addEventListener("click", function () {
+      currentPlayerIndex = 0;
+      startGame();
+    });
+
+    restartButton.addEventListener("click", function () {
+      if (selectedMode === "two") {
+        startNextTurn();
+      } else {
+        startGame();
+      }
+    });
+
+    leftButton.addEventListener(
+      "pointerdown",
+      function (event) {
+        event.preventDefault();
+        movePlayer(-1);
+      }
+    );
+
+    rightButton.addEventListener(
+      "pointerdown",
+      function (event) {
+        event.preventDefault();
+        movePlayer(1);
+      }
+    );
+
+    window.addEventListener(
+      "keydown",
+      function (event) {
+        if (event.key === "ArrowLeft") {
+          event.preventDefault();
+          movePlayer(-1);
+        }
+
+        if (event.key === "ArrowRight") {
+          event.preventDefault();
+          movePlayer(1);
+        }
+
+        if (
+          (event.key === "Enter" ||
+            event.key === " ") &&
+          !running &&
+          startOverlay.style.display !== "none"
+        ) {
+          event.preventDefault();
+          currentPlayerIndex = 0;
+          startGame();
+        }
+      }
+    );
+
+    canvas.addEventListener(
+      "pointerdown",
+      function (event) {
+        swipeStartX = event.clientX;
+      }
+    );
+
+    canvas.addEventListener(
+      "pointerup",
+      function (event) {
+        if (
+          swipeStartX === null ||
+          !running
+        ) {
+          swipeStartX = null;
+          return;
+        }
+
+        const deltaX =
+          event.clientX - swipeStartX;
+
+        swipeStartX = null;
+
+        if (Math.abs(deltaX) < 30) {
+          return;
+        }
+
+        if (deltaX < 0) {
+          movePlayer(-1);
+        } else {
+          movePlayer(1);
+        }
+      }
+    );
+
+    canvas.addEventListener(
+      "pointercancel",
+      function () {
+        swipeStartX = null;
+      }
+    );
+
+    window.addEventListener(
+      "resize",
+      resizeCanvas
+    );
+
+    resizeCanvas();
+    resetGameState();
+    renderLeaderboard();
+    draw();
+  </script>
+</body>
+</html>
+```
